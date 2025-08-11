@@ -1,2 +1,526 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"><title>HyperEVM Trading</title><script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script><style>*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;overflow-x:hidden;min-height:100vh}.container{max-width:375px;margin:0 auto;min-height:100vh;background:#000;padding-top:80px}.header{padding:16px;display:flex;justify-content:space-between;align-items:center;position:fixed;top:0;left:0;right:0;max-width:375px;margin:0 auto;background:#000;z-index:90;border-bottom:1px solid #222}.token-info{cursor:pointer}.token-pair{font-size:20px;font-weight:700;color:#fff}.price-change{color:#00ff88;font-size:14px;font-weight:600}.connect-btn{background:#1a1a1a;border:1px solid #333;color:#00ff88;padding:8px 12px;border-radius:6px;font-size:12px;cursor:pointer}.connect-btn.connected{background:#00ff88;color:#000}.price-section{padding:20px 16px;text-align:center}.price-display{font-size:36px;font-weight:700;color:#fff;margin-bottom:8px}.order-book{margin:0 16px 20px 16px;background:#111;border-radius:12px;padding:16px;border:1px solid #222}.order-book-title{font-size:14px;color:#888;margin-bottom:12px}.order-percentages{display:flex;justify-content:space-between;align-items:center;background:#1a1a1a;border-radius:8px;padding:12px 16px}.buy-percentage{color:#00ff88;font-weight:700;font-size:16px}.sell-percentage{color:#ff4444;font-weight:700;font-size:16px}.trading-buttons{display:flex;gap:12px;margin:20px 16px}.trade-btn{flex:1;padding:20px;border:none;border-radius:12px;font-size:18px;font-weight:700;cursor:pointer}.long-btn{background:#00ff88;color:#000}.short-btn{background:#ff4444;color:#fff}.token-dropdown{position:absolute;top:70px;left:16px;right:16px;background:#1a1a1a;border:1px solid #333;border-radius:12px;z-index:100;display:none;max-height:300px;overflow-y:auto}.token-option{padding:16px;border-bottom:1px solid #333;cursor:pointer}.token-option:hover{background:#333}.token-name{font-weight:600}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);max-width:375px;width:100%;background:#111;border-top:1px solid #333;display:flex;justify-content:space-around;padding:12px 0}.nav-item{flex:1;text-align:center;padding:8px;color:#888;font-size:12px;cursor:pointer;border:none;background:none}.nav-item.active{color:#00ff88}.page{display:none;padding-bottom:80px}.page.active{display:block}</style></head><body><div class="container"><div class="header"><div class="token-info" onclick="toggleDropdown()"><div class="token-pair" id="tokenPair">BUDDY/WHYPE</div><div class="price-change" id="priceChange">+2.01%</div></div><button class="connect-btn" id="connectBtn" onclick="connectWallet()">Connect</button></div><div class="token-dropdown" id="dropdown"><div class="token-option" onclick="selectToken('BUDDY',0.01214,2.01)"><span class="token-name">BUDDY/WHYPE</span></div><div class="token-option" onclick="selectToken('RUB',0.00856,-1.45)"><span class="token-name">RUB/WHYPE</span></div><div class="token-option" onclick="selectToken('PURR',0.02345,5.67)"><span class="token-name">PURR/WHYPE</span></div><div class="token-option" onclick="selectToken('LHYPE',0.01890,3.22)"><span class="token-name">LHYPE/WHYPE</span></div><div class="token-option" onclick="selectToken('PiP',0.00567,-0.89)"><span class="token-name">PiP/WHYPE</span></div><div class="token-option" onclick="selectToken('HSTR',0.01456,4.33)"><span class="token-name">HSTR/WHYPE</span></div><div class="token-option" onclick="selectToken('KITTEN',0.00789,1.78)"><span class="token-name">KITTEN/WHYPE</span></div><div class="token-option" onclick="selectToken('HL',0.02123,-2.34)"><span class="token-name">HL/WHYPE</span></div></div><div id="trading" class="page active"><div class="price-section"><div class="price-display" id="price">$0.01214000</div><div class="price-change" id="change">+2.01%</div></div><div class="order-book"><div class="order-book-title">Order Book</div><div class="order-percentages"><span class="buy-percentage" id="buyPct">B 67%</span><span class="sell-percentage" id="sellPct">33% S</span></div></div><div class="trading-buttons"><button class="trade-btn long-btn" onclick="trade('long')">LONG</button><button class="trade-btn short-btn" onclick="trade('short')">SHORT</button></div></div><div id="positions" class="page"><div style="padding:40px 16px;text-align:center"><h2>Positions</h2><p style="color:#666;margin-top:10px">No open positions</p></div></div><div id="assets" class="page"><div style="padding:40px 16px;text-align:center"><h2>Assets</h2><p style="color:#666;margin-top:10px" id="assetsMsg">Connect wallet to view assets</p></div></div><div class="bottom-nav"><button class="nav-item active" onclick="showPage('trading')">Trade</button><button class="nav-item" onclick="showPage('positions')">Positions</button><button class="nav-item" onclick="showPage('assets')">Assets</button></div></div><script>let connected=false,current={symbol:'BUDDY',price:0.01214,change:2.01};function showPage(p){document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));document.getElementById(p).classList.add('active');event.target.classList.add('active')}function toggleDropdown(){const d=document.getElementById('dropdown');d.style.display=d.style.display==='block'?'none':'block'}function selectToken(s,p,c){current={symbol:s,price:p,change:c};document.getElementById('tokenPair').textContent=s+'/WHYPE';document.getElementById('price').textContent='$'+p.toFixed(8);const color=c>=0?'#00ff88':'#ff4444';const text=(c>=0?'+':'')+c.toFixed(2)+'%';document.getElementById('priceChange').textContent=text;document.getElementById('priceChange').style.color=color;document.getElementById('change').textContent=text;document.getElementById('change').style.color=color;toggleDropdown()}function updateOrderBook(){const buy=Math.floor(Math.random()*40)+40;const sell=100-buy;document.getElementById('buyPct').textContent=`B ${buy}%`;document.getElementById('sellPct').textContent=`${sell}% S`}async function connectWallet(){if(typeof window.ethereum!=='undefined'){try{await window.ethereum.request({method:'eth_requestAccounts'});try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x3e7'}]})}catch(e){if(e.code===4902){await window.ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:'0x3e7',chainName:'HyperEVM',rpcUrls:['https://api.hyperevm.org/'],nativeCurrency:{name:'HYPE',symbol:'HYPE',decimals:18},blockExplorerUrls:['https://hyperscan.xyz/']}]})}}connected=true;document.getElementById('connectBtn').textContent='Connected';document.getElementById('connectBtn').classList.add('connected');document.getElementById('assetsMsg').textContent='HYPE Balance: Loading...'}catch(e){alert('Failed to connect: '+e.message)}}else{alert('Please install MetaMask')}}function trade(type){if(!connected){alert('Please connect wallet first');return}const amount=prompt(`Enter ${type.toUpperCase()} amount (HYPE):`);if(amount&&parseFloat(amount)>0){alert(`${type.toUpperCase()} position opened: ${amount} HYPE on ${current.symbol}/WHYPE`)}}document.addEventListener('click',e=>{if(!document.querySelector('.token-info').contains(e.target)){document.getElementById('dropdown').style.display='none'}});setInterval(updateOrderBook,3000);updateOrderBook()</script></body></html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>HyperEVM Real-Time Trading - TOKEN/WHYPE</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; overflow-x: hidden; min-height: 100vh; }
+        .container { max-width: 375px; margin: 0 auto; min-height: 100vh; background: #000; padding-top: 90px; display: flex; flex-direction: column; }
+        .header { padding: 16px; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; left: 0; right: 0; max-width: 375px; margin: 0 auto; background: #000; z-index: 90; border-bottom: 1px solid #222; }
+        .token-info { display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+        .token-pair { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .price-change { color: #00ff88; font-size: 14px; font-weight: 600; }
+        .connect-btn { background: #1a1a1a; border: 1px solid #333; color: #00ff88; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: background 0.3s; }
+        .connect-btn.connected { background: #00ff88; color: #000; }
+        .chart-section { margin: 20px 16px; background: linear-gradient(135deg, #1a1a1a 0%, #0d1117 100%); border-radius: 16px; border: 1px solid #333; overflow: hidden; }
+        .chart-header { padding: 16px; border-bottom: 1px solid #333; }
+        .chart-title { font-size: 14px; color: #888; margin-bottom: 8px; }
+        .chart-price { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+        .chart-change { font-size: 14px; font-weight: 600; }
+        .chart-container { height: 200px; position: relative; padding: 20px; background: linear-gradient(180deg, rgba(0,255,136,0.05) 0%, rgba(0,0,0,0.8) 100%); }
+        .candlestick-chart { width: 100%; height: 100%; position: relative; display: flex; align-items: end; gap: 2px; }
+        .candle { flex: 1; height: 100%; position: relative; min-width: 8px; }
+        .candle-body { width: 60%; margin: 0 auto; border-radius: 1px; position: relative; }
+        .candle-wick { width: 1px; background: #666; margin: 0 auto; position: absolute; left: 50%; transform: translateX(-50%); }
+        .candle.green .candle-body { background: linear-gradient(180deg, #00ff88 0%, #00cc66 100%); border: 1px solid #00ff88; }
+        .candle.red .candle-body { background: linear-gradient(180deg, #ff4444 0%, #cc2222 100%); border: 1px solid #ff4444; }
+        .candle.green .candle-wick { background: #00ff88; }
+        .candle.red .candle-wick { background: #ff4444; }
+        .order-book { margin: 0 16px 20px 16px; background: linear-gradient(135deg, #111 0%, #0a0a0a 100%); border-radius: 12px; padding: 16px; border: 1px solid #222; }
+        .order-book-title { font-size: 14px; color: #888; margin-bottom: 12px; }
+        .order-percentages { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #1a1a1a 0%, #151515 100%); border-radius: 8px; padding: 12px 16px; border: 1px solid #333; }
+        .buy-percentage { color: #00ff88; font-weight: 700; font-size: 16px; }
+        .sell-percentage { color: #ff4444; font-weight: 700; font-size: 16px; }
+        .trading-section { padding: 0 16px; }
+        .leverage-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #111; border-radius: 8px; border: 1px solid #333; }
+        .leverage-label { font-size: 14px; color: #888; }
+        .leverage-value { font-size: 16px; font-weight: 600; color: #fff; }
+        .quantity-section { margin-bottom: 20px; }
+        .quantity-label { font-size: 14px; color: #888; margin-bottom: 8px; }
+        .quantity-input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 16px; border-radius: 8px; font-size: 16px; }
+        .trading-buttons { display: flex; gap: 12px; margin-bottom: 20px; }
+        .trade-btn { flex: 1; padding: 20px; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.3s; }
+        .long-btn { background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%); color: #000; box-shadow: 0 4px 20px rgba(0,255,136,0.3); }
+        .short-btn { background: linear-gradient(135deg, #ff4444 0%, #cc2222 100%); color: #fff; box-shadow: 0 4px 20px rgba(255,68,68,0.3); }
+        .trade-btn:active { transform: scale(0.98); }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); max-width: 375px; width: 100%; background: linear-gradient(180deg, #111 0%, #0a0a0a 100%); border-top: 1px solid #333; display: flex; justify-content: space-around; padding: 12px 0; z-index: 80; }
+        .nav-item { flex: 1; text-align: center; padding: 8px; color: #888; font-size: 12px; cursor: pointer; border: none; background: none; transition: color 0.3s; }
+        .nav-item.active { color: #00ff88; }
+        .page { display: none; padding-bottom: 80px; }
+        .page.active { display: block; }
+        .token-dropdown { position: absolute; top: 70px; left: 16px; right: 16px; background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); border: 1px solid #333; border-radius: 12px; z-index: 100; display: none; max-height: 300px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.8); }
+        .token-option { padding: 16px; border-bottom: 1px solid #333; cursor: pointer; transition: background 0.3s; }
+        .token-option:hover { background: rgba(0,255,136,0.1); }
+        .token-option:last-child { border-bottom: none; }
+        .token-name { font-weight: 600; margin-bottom: 4px; }
+        .token-price { font-size: 12px; color: #888; }
+        .positions-container { padding: 20px 16px; }
+        .position-card { background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #333; }
+        .position-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .position-symbol { font-weight: 700; font-size: 16px; }
+        .position-type { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .position-type.long { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .position-type.short { background: rgba(255,68,68,0.2); color: #ff4444; }
+        .position-details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .position-detail { text-align: center; }
+        .position-detail-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .position-detail-value { font-weight: 600; }
+        .assets-container { padding: 20px 16px; }
+        .balance-card { background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #333; text-align: center; }
+        .balance-title { font-size: 14px; color: #888; margin-bottom: 8px; }
+        .balance-amount { font-size: 32px; font-weight: 700; color: #00ff88; margin-bottom: 4px; }
+        .balance-usd { font-size: 14px; color: #888; }
+        .dropdown-arrow { font-size: 12px; color: #666; margin-left: 4px; }
+        .funding-info { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #0a0a0a; border-radius: 8px; margin: 0 16px 16px 16px; border: 1px solid #222; }
+        .funding-rate { font-size: 12px; color: #888; }
+        .funding-countdown { font-size: 12px; color: #00ff88; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="token-info" onclick="toggleDropdown()">
+                <div class="token-pair" id="tokenPair">
+                    BUDDY/WHYPE
+                    <span class="dropdown-arrow">▼</span>
+                </div>
+                <div class="price-change" id="priceChange">+2.01%</div>
+            </div>
+            <button class="connect-btn" id="connectBtn" onclick="connectWallet()">Connect</button>
+        </div>
+
+        <!-- Token Selection Dropdown -->
+        <div class="token-dropdown" id="dropdown">
+            <div class="token-option" onclick="selectToken('BUDDY', 0.01214, 2.01)">
+                <div class="token-name">BUDDY/WHYPE</div>
+                <div class="token-price">$0.01214000</div>
+            </div>
+            <div class="token-option" onclick="selectToken('RUB', 0.00856, -1.45)">
+                <div class="token-name">RUB/WHYPE</div>
+                <div class="token-price">$0.00856000</div>
+            </div>
+            <div class="token-option" onclick="selectToken('PURR', 0.02345, 5.67)">
+                <div class="token-name">PURR/WHYPE</div>
+                <div class="token-price">$0.02345000</div>
+            </div>
+            <div class="token-option" onclick="selectToken('LHYPE', 0.01890, 3.22)">
+                <div class="token-name">LHYPE/WHYPE</div>
+                <div class="token-price">$0.01890000</div>
+            </div>
+            <div class="token-option" onclick="selectToken('PiP', 0.00567, -0.89)">
+                <div class="token-name">PiP/WHYPE</div>
+                <div class="token-price">$0.00567000</div>
+            </div>
+            <div class="token-option" onclick="selectToken('HSTR', 0.01456, 4.33)">
+                <div class="token-name">HSTR/WHYPE</div>
+                <div class="token-price">$0.01456000</div>
+            </div>
+            <div class="token-option" onclick="selectToken('KITTEN', 0.00789, 1.78)">
+                <div class="token-name">KITTEN/WHYPE</div>
+                <div class="token-price">$0.00789000</div>
+            </div>
+            <div class="token-option" onclick="selectToken('HL', 0.02123, -2.34)">
+                <div class="token-name">HL/WHYPE</div>
+                <div class="token-price">$0.02123000</div>
+            </div>
+        </div>
+
+        <!-- Trading Page -->
+        <div id="trading" class="page active">
+            <!-- Chart Section -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">BUDDY/WHYPE • 5m</div>
+                    <div class="chart-price" id="chartPrice">$0.01214000</div>
+                    <div class="chart-change" id="chartChange">+2.01%</div>
+                </div>
+                <div class="chart-container">
+                    <div class="candlestick-chart" id="candlestickChart">
+                        <!-- Candlesticks will be generated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Funding Rate -->
+            <div class="funding-info">
+                <span class="funding-rate">Funding Rate: <span id="fundingRate">0.01%</span></span>
+                <span class="funding-countdown" id="fundingCountdown">00:51:34</span>
+            </div>
+
+            <!-- Order Book -->
+            <div class="order-book">
+                <div class="order-book-title">Order Book</div>
+                <div class="order-percentages">
+                    <span class="buy-percentage" id="buyPercentage">B 67%</span>
+                    <span class="sell-percentage" id="sellPercentage">33% S</span>
+                </div>
+            </div>
+
+            <!-- Trading Section -->
+            <div class="trading-section">
+                <div class="leverage-section">
+                    <span class="leverage-label">Leverage</span>
+                    <span class="leverage-value" id="leverageDisplay">Gross</span>
+                </div>
+
+                <div class="quantity-section">
+                    <div class="quantity-label">Quantity</div>
+                    <input type="number" class="quantity-input" id="quantityInput" placeholder="0.00" step="0.01">
+                </div>
+
+                <div class="trading-buttons">
+                    <button class="trade-btn long-btn" onclick="openPosition('long')">LONG</button>
+                    <button class="trade-btn short-btn" onclick="openPosition('short')">SHORT</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Positions Page -->
+        <div id="positions" class="page">
+            <div class="positions-container">
+                <h2 style="margin-bottom: 20px;">Positions</h2>
+                <div id="positionsContent">
+                    <div style="text-align: center; color: #666; padding: 40px 0;">
+                        No open positions
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assets Page -->
+        <div id="assets" class="page">
+            <div class="assets-container">
+                <h2 style="margin-bottom: 20px;">Assets</h2>
+                <div class="balance-card">
+                    <div class="balance-title">Available Balance</div>
+                    <div class="balance-amount" id="walletBalance">Connect Wallet</div>
+                    <div class="balance-usd" id="walletBalanceUSD">$0.00 USD</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <button class="nav-item active" onclick="showPage('trading')">Trade</button>
+            <button class="nav-item" onclick="showPage('positions')">Positions</button>
+            <button class="nav-item" onclick="showPage('assets')">Assets</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let walletConnected = false;
+        let userAccount = null;
+        let currentToken = {
+            symbol: 'BUDDY',
+            price: 0.01214,
+            change: 2.01
+        };
+        let positions = [];
+        let provider = null;
+        let signer = null;
+
+        // Navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId).classList.add('active');
+            
+            // Add active class to clicked nav item
+            event.target.classList.add('active');
+        }
+
+        // Token selection
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function selectToken(symbol, price, change) {
+            currentToken = { symbol, price, change };
+            
+            // Update UI
+            document.getElementById('tokenPair').innerHTML = `${symbol}/WHYPE <span class="dropdown-arrow">▼</span>`;
+            document.getElementById('chartPrice').textContent = `$${price.toFixed(8)}`;
+            
+            const changeColor = change >= 0 ? '#00ff88' : '#ff4444';
+            const changeText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+            
+            document.getElementById('priceChange').textContent = changeText;
+            document.getElementById('priceChange').style.color = changeColor;
+            document.getElementById('chartChange').textContent = changeText;
+            document.getElementById('chartChange').style.color = changeColor;
+            
+            // Hide dropdown
+            toggleDropdown();
+            
+            // Update chart
+            updateChart();
+        }
+
+        // Chart generation
+        function updateChart() {
+            const chartContainer = document.getElementById('candlestickChart');
+            chartContainer.innerHTML = '';
+            
+            // Generate 20 candlesticks
+            for (let i = 0; i < 20; i++) {
+                const candle = document.createElement('div');
+                candle.className = 'candle';
+                
+                // Random price movement
+                const isGreen = Math.random() > 0.5;
+                const bodyHeight = Math.random() * 60 + 20; // 20-80% height
+                const wickTop = Math.random() * 20;
+                const wickBottom = Math.random() * 20;
+                
+                candle.className += isGreen ? ' green' : ' red';
+                
+                const wickElement = document.createElement('div');
+                wickElement.className = 'candle-wick';
+                wickElement.style.height = '100%';
+                wickElement.style.top = '0';
+                
+                const bodyElement = document.createElement('div');
+                bodyElement.className = 'candle-body';
+                bodyElement.style.height = `${bodyHeight}%`;
+                bodyElement.style.bottom = `${wickBottom}%`;
+                
+                candle.appendChild(wickElement);
+                candle.appendChild(bodyElement);
+                chartContainer.appendChild(candle);
+            }
+        }
+
+        // Order book updates
+        function updateOrderBook() {
+            const buyPercentage = Math.floor(Math.random() * 40) + 40; // 40-80%
+            const sellPercentage = 100 - buyPercentage;
+            
+            document.getElementById('buyPercentage').textContent = `B ${buyPercentage}%`;
+            document.getElementById('sellPercentage').textContent = `${sellPercentage}% S`;
+        }
+
+        // Funding rate countdown
+        function updateFundingCountdown() {
+            const now = new Date();
+            const nextHour = new Date(now);
+            nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+            
+            const diff = nextHour - now;
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('fundingCountdown').textContent = 
+                `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Wallet connection
+        async function connectWallet() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    // Request account access
+                    const accounts = await window.ethereum.request({
+                        method: 'eth_requestAccounts'
+                    });
+                    
+                    // Switch to HyperEVM network
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x3e7' }] // 999 in hex
+                        });
+                    } catch (switchError) {
+                        // Add HyperEVM network if not exists
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x3e7',
+                                    chainName: 'HyperEVM',
+                                    rpcUrls: ['https://api.hyperevm.org/'],
+                                    nativeCurrency: {
+                                        name: 'HYPE',
+                                        symbol: 'HYPE',
+                                        decimals: 18
+                                    },
+                                    blockExplorerUrls: ['https://hyperscan.xyz/']
+                                }]
+                            });
+                        }
+                    }
+                    
+                    userAccount = accounts[0];
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    signer = await provider.getSigner();
+                    walletConnected = true;
+                    
+                    // Update UI
+                    document.getElementById('connectBtn').textContent = 'Connected';
+                    document.getElementById('connectBtn').classList.add('connected');
+                    
+                    // Get balance
+                    await updateBalance();
+                    
+                } catch (error) {
+                    console.error('Wallet connection failed:', error);
+                    alert('Failed to connect wallet: ' + error.message);
+                }
+            } else {
+                alert('Please install MetaMask to use this application');
+            }
+        }
+
+        // Update balance
+        async function updateBalance() {
+            if (walletConnected && provider) {
+                try {
+                    const balance = await provider.getBalance(userAccount);
+                    const balanceInHype = parseFloat(ethers.formatEther(balance));
+                    
+                    document.getElementById('walletBalance').textContent = `${balanceInHype.toFixed(4)} HYPE`;
+                    document.getElementById('walletBalanceUSD').textContent = `$${(balanceInHype * 0.12).toFixed(2)} USD`;
+                } catch (error) {
+                    console.error('Failed to get balance:', error);
+                }
+            }
+        }
+
+        // Trading
+        async function openPosition(type) {
+            if (!walletConnected) {
+                await connectWallet();
+                return;
+            }
+            
+            const quantity = parseFloat(document.getElementById('quantityInput').value);
+            if (!quantity || quantity <= 0) {
+                alert('Please enter a valid quantity');
+                return;
+            }
+            
+            try {
+                // Get user balance
+                const balance = await provider.getBalance(userAccount);
+                const balanceInHype = parseFloat(ethers.formatEther(balance));
+                
+                // Use entire balance minus gas fees
+                const amountToUse = Math.max(0, balanceInHype - 0.001);
+                
+                if (amountToUse <= 0) {
+                    alert('Insufficient HYPE balance for trading');
+                    return;
+                }
+                
+                // Create position object
+                const position = {
+                    id: Date.now(),
+                    symbol: currentToken.symbol,
+                    type: type,
+                    amount: amountToUse,
+                    entryPrice: currentToken.price,
+                    timestamp: new Date(),
+                    leverage: 10 // Default leverage
+                };
+                
+                // Add to positions
+                positions.push(position);
+                
+                // Update positions display
+                updatePositionsDisplay();
+                
+                // Show success message
+                alert(`${type.toUpperCase()} position opened successfully!\n\nSymbol: ${currentToken.symbol}/WHYPE\nAmount: ${amountToUse.toFixed(4)} HYPE\nEntry Price: $${currentToken.price.toFixed(8)}\nLeverage: 10x`);
+                
+                // Clear input
+                document.getElementById('quantityInput').value = '';
+                
+                // Update balance
+                await updateBalance();
+                
+            } catch (error) {
+                console.error('Trading failed:', error);
+                alert('Failed to open position: ' + error.message);
+            }
+        }
+
+        // Update positions display
+        function updatePositionsDisplay() {
+            const container = document.getElementById('positionsContent');
+            
+            if (positions.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #666; padding: 40px 0;">No open positions</div>';
+                return;
+            }
+            
+            container.innerHTML = positions.map(position => {
+                const currentPrice = currentToken.symbol === position.symbol ? currentToken.price : position.entryPrice;
+                const pnl = position.type === 'long' 
+                    ? (currentPrice - position.entryPrice) * position.amount * position.leverage
+                    : (position.entryPrice - currentPrice) * position.amount * position.leverage;
+                
+                const pnlColor = pnl >= 0 ? '#00ff88' : '#ff4444';
+                
+                return `
+                    <div class="position-card">
+                        <div class="position-header">
+                            <div class="position-symbol">${position.symbol}/WHYPE</div>
+                            <div class="position-type ${position.type}">${position.type.toUpperCase()}</div>
+                        </div>
+                        <div class="position-details">
+                            <div class="position-detail">
+                                <div class="position-detail-label">Amount</div>
+                                <div class="position-detail-value">${position.amount.toFixed(4)} HYPE</div>
+                            </div>
+                            <div class="position-detail">
+                                <div class="position-detail-label">Entry Price</div>
+                                <div class="position-detail-value">$${position.entryPrice.toFixed(8)}</div>
+                            </div>
+                            <div class="position-detail">
+                                <div class="position-detail-label">Current Price</div>
+                                <div class="position-detail-value">$${currentPrice.toFixed(8)}</div>
+                            </div>
+                            <div class="position-detail">
+                                <div class="position-detail-label">PnL</div>
+                                <div class="position-detail-value" style="color: ${pnlColor}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(4)} HYPE</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateChart();
+            updateOrderBook();
+            updateFundingCountdown();
+            
+            // Update order book every 3 seconds
+            setInterval(updateOrderBook, 3000);
+            
+            // Update funding countdown every second
+            setInterval(updateFundingCountdown, 1000);
+            
+            // Click outside to close dropdown
+            document.addEventListener('click', function(event) {
+                if (!document.querySelector('.token-info').contains(event.target)) {
+                    document.getElementById('dropdown').style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
