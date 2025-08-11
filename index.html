@@ -2317,10 +2317,8 @@
             const tokenList = document.getElementById('tokenList');
             tokenList.innerHTML = '';
             
-            // Ensure all 9 HyperEVM tokens are always visible
-            const allTokens = [
-                'BUDDY', 'RUB', 'PURR', 'LHYPE', 'PiP', 'HSTR', 'KITTEN', 'HL', 'LIQD'
-            ];
+            // Only include authentic HyperEVM tokens (no hardcoded list)
+            // Token list is populated dynamically from real API data only
             
             // Add tokens from real data first
             Object.values(tokenData).forEach(token => {
@@ -2352,34 +2350,7 @@
                 tokenList.appendChild(tokenItem);
             });
             
-            // Add any missing tokens with default data to ensure all 8 are visible
-            const loadedSymbols = Object.keys(tokenData);
-            allTokens.forEach(symbol => {
-                if (!loadedSymbols.includes(symbol)) {
-                    const tokenItem = document.createElement('div');
-                    tokenItem.className = 'token-item';
-                    tokenItem.onclick = (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        selectToken(symbol);
-                    };
-                    
-                    tokenItem.innerHTML = `
-                        <div class="token-info-left">
-                            <div class="token-symbol">${symbol}</div>
-                            <div class="token-name">${symbol} Token</div>
-                        </div>
-                        <div class="token-info-right">
-                            <div class="token-price">Loading...</div>
-                            <div class="token-change" style="color: #666; font-size: 12px; font-weight: 500;">
-                                --
-                            </div>
-                        </div>
-                    `;
-                    
-                    tokenList.appendChild(tokenItem);
-                }
-            });
+            // Only show tokens with real data - no fallback "Loading..." tokens
             
             console.log(`📋 Token list populated with ${tokenList.children.length} tokens visible`);
         }
