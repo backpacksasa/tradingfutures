@@ -2317,6 +2317,12 @@
             const tokenList = document.getElementById('tokenList');
             tokenList.innerHTML = '';
             
+            // Ensure all 8 HyperEVM tokens are always visible
+            const allTokens = [
+                'BUDDY', 'RUB', 'PURR', 'LHYPE', 'PiP', 'HSTR', 'KITTEN', 'HL'
+            ];
+            
+            // Add tokens from real data first
             Object.values(tokenData).forEach(token => {
                 const changeClass = token.change >= 0 ? 'positive' : 'negative';
                 const changeSign = token.change >= 0 ? '+' : '';
@@ -2345,6 +2351,37 @@
                 
                 tokenList.appendChild(tokenItem);
             });
+            
+            // Add any missing tokens with default data to ensure all 8 are visible
+            const loadedSymbols = Object.keys(tokenData);
+            allTokens.forEach(symbol => {
+                if (!loadedSymbols.includes(symbol)) {
+                    const tokenItem = document.createElement('div');
+                    tokenItem.className = 'token-item';
+                    tokenItem.onclick = (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        selectToken(symbol);
+                    };
+                    
+                    tokenItem.innerHTML = `
+                        <div class="token-info-left">
+                            <div class="token-symbol">${symbol}</div>
+                            <div class="token-name">${symbol} Token</div>
+                        </div>
+                        <div class="token-info-right">
+                            <div class="token-price">Loading...</div>
+                            <div class="token-change" style="color: #666; font-size: 12px; font-weight: 500;">
+                                --
+                            </div>
+                        </div>
+                    `;
+                    
+                    tokenList.appendChild(tokenItem);
+                }
+            });
+            
+            console.log(`📋 Token list populated with ${tokenList.children.length} tokens visible`);
         }
         
 
