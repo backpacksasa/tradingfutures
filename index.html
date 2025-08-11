@@ -2320,8 +2320,14 @@
             // Only include authentic HyperEVM tokens (no hardcoded list)
             // Token list is populated dynamically from real API data only
             
-            // Add tokens from real data first
+            // Only add verified authentic HyperEVM tokens
+            const authenticHyperEVMTokens = ['BUDDY', 'RUB', 'PURR', 'LHYPE', 'PiP', 'HSTR', 'KITTEN', 'HL', 'LIQD'];
+            
             Object.values(tokenData).forEach(token => {
+                // Skip non-authentic tokens
+                if (!authenticHyperEVMTokens.includes(token.symbol)) {
+                    return;
+                }
                 const changeClass = token.change >= 0 ? 'positive' : 'negative';
                 const changeSign = token.change >= 0 ? '+' : '';
                 const changeColor = token.change >= 0 ? '#00ff88' : '#ff4757';
