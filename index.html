@@ -2301,16 +2301,26 @@
         // Token selector functions
         function toggleTokenSelector() {
             const modal = document.getElementById('tokenSelector');
-            modal.style.display = 'flex';
-            populateTokenList();
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.add('active');
+                document.body.classList.add('modal-open');
+                populateTokenList();
+                console.log('✅ Token selector opened');
+            }
         }
         
         function closeTokenSelector() {
             const modal = document.getElementById('tokenSelector');
+            
             if (modal) {
                 modal.style.display = 'none';
-                console.log('✅ Token selector dropdown closed');
+                modal.classList.remove('active');
+                console.log('✅ Token selector closed');
             }
+            
+            // Remove any background blur effects
+            document.body.classList.remove('modal-open');
         }
         
         function populateTokenList() {
@@ -2694,8 +2704,8 @@
         </div>
         
         <!-- Token Selector Modal -->
-        <div class="token-selector-modal" id="tokenSelector" style="display: none;">
-            <div class="token-selector-content">
+        <div class="token-selector-modal" id="tokenSelector" style="display: none;" onclick="closeTokenSelector()">
+            <div class="token-selector-content" onclick="event.stopPropagation()">
                 <div class="token-selector-header">
                     <h3>Select Token</h3>
                     <button class="close-btn" onclick="closeTokenSelector()">&times;</button>
