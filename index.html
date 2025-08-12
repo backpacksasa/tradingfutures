@@ -2429,65 +2429,95 @@
         }
         
         function selectToken(symbol) {
-            console.log(`🔄 Selecting token: ${symbol}`);
-            
-            currentToken = symbol;
-            currentSymbol = `${symbol}/WHYPE`; // Update chart symbol
-            
-            // Use instant token data if no API data available
-            let token = tokenData[symbol];
-            if (!token) {
-                // Fallback to instant token data for interface updates
-                const instantTokens = {
-                    "BUDDY": { symbol: "BUDDY", name: "alright buddy", price: 0.000303, change: 11.26 },
-                    "RUB": { symbol: "RUB", name: "RUB", price: 7193040.0, change: 25.18 },
-                    "PURR": { symbol: "PURR", name: "Purr", price: 0.1773, change: 7.30 },
-                    "LHYPE": { symbol: "LHYPE", name: "Liquid HYPE", price: 0.09832, change: -2.15 },
-                    "PiP": { symbol: "PiP", name: "PiP Token", price: 0.06534, change: 4.67 },
-                    "HSTR": { symbol: "HSTR", name: "Hamster", price: 0.00543, change: -10.64 },
-                    "KITTEN": { symbol: "KITTEN", name: "Kittenswap", price: 0.02236, change: 7.99 },
-                    "HL": { symbol: "HL", name: "Holy Liquid", price: 0.0008933, change: -5.44 },
-                    "LIQD": { symbol: "LIQD", name: "LiquidLaunch", price: 0.01297, change: -1.09 }
-                };
-                token = instantTokens[symbol];
+            try {
+                console.log(`🔄 Selecting token: ${symbol}`);
+                
+                // FORCE CLOSE MODAL FIRST - Critical fix
+                closeTokenSelector();
+                
+                currentToken = symbol;
+                currentSymbol = `${symbol}/WHYPE`; // Update chart symbol
+                
+                // Use instant token data if no API data available
+                let token = tokenData[symbol];
                 if (!token) {
-                    console.error('Token not found:', symbol);
-                    closeTokenSelector();
-                    return;
+                    // Fallback to instant token data for interface updates
+                    const instantTokens = {
+                        "BUDDY": { symbol: "BUDDY", name: "alright buddy", price: 0.000303, change: 11.26 },
+                        "RUB": { symbol: "RUB", name: "RUB", price: 7193040.0, change: 25.18 },
+                        "PURR": { symbol: "PURR", name: "Purr", price: 0.1773, change: 7.30 },
+                        "LHYPE": { symbol: "LHYPE", name: "Liquid HYPE", price: 0.09832, change: -2.15 },
+                        "PiP": { symbol: "PiP", name: "PiP Token", price: 0.06534, change: 4.67 },
+                        "HSTR": { symbol: "HSTR", name: "Hamster", price: 0.00543, change: -10.64 },
+                        "KITTEN": { symbol: "KITTEN", name: "Kittenswap", price: 0.02236, change: 7.99 },
+                        "HL": { symbol: "HL", name: "Holy Liquid", price: 0.0008933, change: -5.44 },
+                        "LIQD": { symbol: "LIQD", name: "LiquidLaunch", price: 0.01297, change: -1.09 }
+                    };
+                    token = instantTokens[symbol];
+                    if (!token) {
+                        console.error('Token not found:', symbol);
+                        return;
+                    }
                 }
+                
+                console.log(`Selected ${symbol}/WHYPE - Price: ${parseFloat(token.price).toFixed(8)}`);
+                
+                // 1. Update header token info (with safety checks)
+                const selectedElement = document.getElementById('selectedToken');
+                if (selectedElement) selectedElement.textContent = symbol;
+                
+                const tokenNameElement = document.querySelector('.token-name-display');
+                if (tokenNameElement) tokenNameElement.textContent = token.name;
+                
+                // 2. Update current price and change displays (with safety checks)
+                if (typeof updateHeaderPrice === 'function') {
+                    try { updateHeaderPrice(token.price); } catch (e) { console.warn('updateHeaderPrice error:', e); }
+                }
+                if (typeof updateCurrentTokenDisplay === 'function') {
+                    try { updateCurrentTokenDisplay(); } catch (e) { console.warn('updateCurrentTokenDisplay error:', e); }
+                }
+                
+                // 3. Generate and update order book for selected token (with safety checks)
+                if (typeof generateOrderBook === 'function' && typeof updateOrderBookDisplay === 'function') {
+                    try {
+                        const orderbook = generateOrderBook(parseFloat(token.price), symbol);
+                        updateOrderBookDisplay(orderbook);
+                        
+                        // 6. Update buy/sell percentage display
+                        if (typeof updateBuySellPercentages === 'function') {
+                            updateBuySellPercentages(orderbook);
+                        }
+                    } catch (e) {
+                        console.warn('Order book update error:', e);
+                    }
+                }
+                
+                // 4. Update chart data for new token (with safety checks)
+                if (typeof chartData !== 'undefined' && chartData) {
+                    try { chartData.currentPrice = parseFloat(token.price); } catch (e) { console.warn('chartData error:', e); }
+                }
+                if (typeof generateTradingViewChart === 'function') {
+                    try { generateTradingViewChart(currentSymbol, '5m'); } catch (e) { console.warn('generateTradingViewChart error:', e); }
+                }
+                if (typeof updateChart === 'function') {
+                    try { updateChart(); } catch (e) { console.warn('updateChart error:', e); }
+                }
+                
+                // 5. Reset price tracking (with safety checks)
+                if (typeof openingPrice !== 'undefined') {
+                    try { openingPrice = parseFloat(token.price); } catch (e) { console.warn('openingPrice error:', e); }
+                }
+                if (typeof previousPrice !== 'undefined') {
+                    try { previousPrice = parseFloat(token.price); } catch (e) { console.warn('previousPrice error:', e); }
+                }
+                
+                console.log(`✅ Interface updated for ${symbol}: price, orderbook, chart, and percentages`);
+                
+            } catch (error) {
+                console.error('Critical error in selectToken:', error);
+                // ENSURE modal always closes even on error
+                closeTokenSelector();
             }
-            
-            console.log(`Selected ${symbol}/WHYPE - Price: ${parseFloat(token.price).toFixed(8)}`);
-            
-            // 1. Update header token info
-            document.getElementById('selectedToken').textContent = symbol;
-            const tokenNameElement = document.querySelector('.token-name-display');
-            if (tokenNameElement) tokenNameElement.textContent = token.name;
-            
-            // 2. Update current price and change displays
-            updateHeaderPrice(token.price);
-            updateCurrentTokenDisplay();
-            
-            // 3. Generate and update order book for selected token
-            const orderbook = generateOrderBook(parseFloat(token.price), symbol);
-            updateOrderBookDisplay(orderbook);
-            
-            // 4. Update chart data for new token
-            chartData.currentPrice = parseFloat(token.price);
-            generateTradingViewChart(currentSymbol, '5m');
-            updateChart();
-            
-            // 5. Reset price tracking
-            openingPrice = parseFloat(token.price);
-            previousPrice = parseFloat(token.price);
-            
-            // 6. Update buy/sell percentage display
-            updateBuySellPercentages(orderbook);
-            
-            // 7. Close token selector
-            closeTokenSelector();
-            
-            console.log(`✅ Interface updated for ${symbol}: price, orderbook, chart, and percentages`);
         }
 
         function generateTokenSpecificChart(tokenSymbol, timeframe = '5m') {
